@@ -1,0 +1,14 @@
+{
+    "interval": 1,
+    "warning": true,
+    "seed": 0,
+    "dir": "data/hangzhou_kn_hz_1h_7_8_827/",
+    "roadnetFile": "roadnet.json",
+    "flowFile": "flow.json",
+    "signalPlanFile": "signal_plan.txt",
+    "rlTrafficLight": true,
+    "laneChange": false,
+    "saveReplay": true,
+    "roadnetLogFile": "log_roadnet.json",
+    "replayLogFile": "replay.txt"
+}
