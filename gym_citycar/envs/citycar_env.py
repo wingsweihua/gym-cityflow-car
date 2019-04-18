@@ -41,12 +41,16 @@ class CityCarEnv(gym.Env):
 
     def step(self, action):
 
+
+        current_time = self.eng.get_current_time()
+        if current_time % 100 == 0:
+            print(current_time)
+
         # take action
         self._set_vehicle_speed(action)
 
         # run one step
         self.eng.next_step()
-        print(self.eng.get_current_time())
 
         # observations for next step
         self._set_signal()
@@ -81,7 +85,10 @@ class CityCarEnv(gym.Env):
 
     def _get_current_phase(self, inter_id):
         current_time = self.eng.get_current_time()
-        return int(self.signal_plan[inter_id][int(current_time)])
+        if current_time == len(self.signal_plan):
+            return int(self.signal_plan[inter_id][int(current_time-1)])
+        else:
+            return int(self.signal_plan[inter_id][int(current_time)])
 
     def _load_signal_plan(self):
 
@@ -219,7 +226,10 @@ class CityCarEnv(gym.Env):
 
                 if (leader != '' and dist_to_leader == -1) or (leader == '' and dist_to_leader != -1):
                     print("wrong vehicle")
-                    sys.exit()
+                    print(leader, dist_to_leader, vec_id)
+                    leader = ''
+                    dist_to_leader = -1
+                    # sys.exit()
 
                 # =================== current vehicle informations =====================
 
@@ -293,7 +303,7 @@ if __name__ == "__main__":
 
 
     env = CityCarEnv(path_to_conf_file="config/default.json", list_vars_to_subscribe=list_vars)
-    for i in range(100):
+    for i in range(3600):
         # observation: {key: value}
         # reward: float
         # done: bool
