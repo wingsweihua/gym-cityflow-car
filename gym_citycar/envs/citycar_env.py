@@ -40,6 +40,7 @@ class CityCarEnv(gym.Env):
             self.list_vars_to_subscribe = kwargs["list_vars_to_subscribe"]
         else:
             self.list_vars_to_subscribe = self.LIST_VARS
+        print("path to conf files", self.path_to_conf_file)
         self.eng = None
         self.dic_static_sim_params = {}
         self.signal_plan = None
