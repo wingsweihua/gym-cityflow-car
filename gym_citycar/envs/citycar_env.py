@@ -214,13 +214,13 @@ class CityCarEnv(gym.Env):
                 dic_vec = {}
 
                 leader = vehicle_leaders[vec_id]
-                dist_to_leader = distance_to_leader[vec_id]
+                dist_tl = distance_to_leader[vec_id]
 
-                if (leader != '' and dist_to_leader == -1) or (leader == '' and dist_to_leader != -1):
+                if (leader != '' and dist_tl == -1) or (leader == '' and dist_tl != -1):
                     print("wrong vehicle")
-                    print(leader, dist_to_leader, vec_id)
+                    print(leader, dist_tl, vec_id)
                     leader = ''
-                    dist_to_leader = -1
+                    dist_tl = -1
                     # sys.exit()
 
                 # =================== current vehicle informations =====================
@@ -256,7 +256,7 @@ class CityCarEnv(gym.Env):
                 dic_vec["leader_max_speed"] = self.dic_static_sim_params["flow_params"][self._get_vec_flow(leader)]["max_speed"] if leader != '' else 100
                 # leader vehicle dynamic obs
                 dic_vec["leader_speed"] = vehicle_speed[leader] if leader != '' else 100
-                dic_vec["dist_to_leader"] = distance_to_leader if leader != '' else 100
+                dic_vec["dist_to_leader"] = dist_tl if leader != '' else 100
 
                 # =================== leader vehicle informations =====================
 
