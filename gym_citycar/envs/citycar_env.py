@@ -11,7 +11,7 @@ import math
 
 class CityCarEnv(gym.Env):
 
-    list_vars = [
+    LIST_VARS = [
         # simulation params
         "interval",
         # bulk obs
@@ -32,8 +32,14 @@ class CityCarEnv(gym.Env):
     ]
 
     def __init__(self, **kwargs):
-        self.path_to_conf_file = kwargs["path_to_conf_file"]
-        self.list_vars_to_subscribe = kwargs["list_vars_to_subscribe"]
+        if "path_to_conf_file" in kwargs:
+            self.path_to_conf_file = kwargs["path_to_conf_file"]
+        else:
+            self.path_to_conf_file = os.path.join("config", "simulator", "default.json")
+        if "list_vars_to_subscribe" in kwargs:
+            self.list_vars_to_subscribe = kwargs["list_vars_to_subscribe"]
+        else:
+            self.list_vars_to_subscribe = self.LIST_VARS
         self.eng = None
         self.dic_static_sim_params = {}
         self.signal_plan = None
@@ -278,28 +284,7 @@ class CityCarEnv(gym.Env):
 
 if __name__ == "__main__":
 
-    list_vars = [
-            # simulation params
-            "interval",
-            # bulk obs
-            "current_time",
-            # all vehicle obs
-
-            # all lane obs
-
-            # current vehicle static params
-            "max_pos_acc", "max_neg_acc", "max_speed", "min_gap", "headway_time",
-            # current vehicle dynamic obs
-            "speed", "lane_id", "pos_in_lane", "lane_max_speed", "if_exit_lane", "dist_to_signal", "phase", "if_leader",
-            # leader vehicle static params
-            "leader_max_pos_acc", "leader_max_neg_acc", "leader_max_speed"
-            # leader vehicle dynamic obs
-            "leader_speed", "dist_to_leader",
-
-        ]
-
-
-    env = CityCarEnv(path_to_conf_file="config/default.json", list_vars_to_subscribe=list_vars)
+    env = CityCarEnv()
     for i in range(3600):
         # observation: {key: value}
         # reward: float
