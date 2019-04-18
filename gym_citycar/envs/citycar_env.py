@@ -208,14 +208,6 @@ class CityCarEnv(gym.Env):
         distance_to_leader = self.eng.get_vehicle_gap()
         vehicle_leaders = self.eng.get_vehicle_leader()
 
-        # simulation params
-        dic_obs["interval"] = self.dic_static_sim_params["interval"]
-        # bulk obs
-        dic_obs["current_time"] = current_time
-
-        # by vehicles
-        dic_obs["vehicles"] = {}
-
         for lane_id, lane_vec in lane_vehicles.items():
             for vec_id in lane_vec:
 
@@ -232,6 +224,11 @@ class CityCarEnv(gym.Env):
                     # sys.exit()
 
                 # =================== current vehicle informations =====================
+
+                # simulation params
+                dic_vec["interval"] = self.dic_static_sim_params["interval"]
+                # bulk obs
+                dic_vec["current_time"] = current_time
 
                 # current vehicle static params
                 dic_vec["max_pos_acc"] = self.dic_static_sim_params["flow_params"][self._get_vec_flow(vec_id)]["max_pos_acc"]
