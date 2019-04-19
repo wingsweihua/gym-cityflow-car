@@ -31,6 +31,29 @@ class CityCarEnv(gym.Env):
 
     ]
 
+    dic_feature_range = {
+        "interval": (0.1, 1),
+        "max_pos_acc": (0, 10),
+        "max_neg_acc": (0, 10),
+        "max_speed": (0, 20),
+        "min_gap": (0, 10),
+        "headway_time": (0, 10),
+        "speed": (0, 20),
+        "pos_in_lane": (0, 1000),
+        "lane_max_speed": (0, 20),
+        "if_exit_lane": (0, 1),
+        "dist_to_signal": (0, 1000),
+        "phase": (0, 1),
+        "if_leader": (0, 1),
+        "leader_max_pos_acc": (0, 10),
+        "leader_max_neg_acc": (0, 10),
+        "leader_max_speed": (0, 20),
+        "leader_speed": (0, 20),
+        "dist_to_leader": (0, 1000),
+    }
+
+    action_range = (0, 20)
+
     def __init__(self, **kwargs):
         self.path_to_conf_file = kwargs["path_to_conf_file"]
         self.list_vars_to_subscribe = kwargs["list_vars_to_subscribe"]
@@ -38,7 +61,16 @@ class CityCarEnv(gym.Env):
         self.eng = None
         self.dic_static_sim_params = {}
         self.signal_plan = None
+
+        self.action_space = spaces.Box(low=np.array([self.action_range[0]]), high=np.array([self.action_range[1]]), dtype=np.float32)
+        self.observation_space = spaces.Box(
+            low=np.array([self.dic_feature_range[_][0] for _ in self.list_vars_to_subscribe]),
+            high=np.array([self.dic_feature_range[_][1] for _ in self.list_vars_to_subscribe]),
+            dtype=np.float32)
+        self.observation_header = self.list_vars_to_subscribe
         self.reset()
+
+
 
     def step(self, n_action, n_info):
 
@@ -199,7 +231,7 @@ class CityCarEnv(gym.Env):
         list_obs = []
         list_reward = []
         list_done = []
-        dic_info = {"vec_id": list(), "next_speed_est": list(), "priority": list(), "current_time": list(), "header": self.list_vars_to_subscribe}
+        dic_info = {"vec_id": list(), "next_speed_est": list(), "priority": list(), "current_time": list()}
 
         current_time = self.eng.get_current_time()  # return a double, time past in seconds
         lane_vehicles = self.eng.get_lane_vehicles()  # return a dict, {lane_id: [vehicle1_id, vehicle2_id, ...], ...}
