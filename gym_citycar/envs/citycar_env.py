@@ -96,7 +96,7 @@ class CityCarEnv(gym.Env):
         # todo - no protection speed yet, decide where to add  (speed can not exceed the maximum speed allowed by the situation)
 
         for ind in range(len(n_action)):
-            self.eng.set_vehicle_speed(n_info["priority"][ind], n_action[ind])
+            self.eng.set_vehicle_speed(n_info["priority"][ind], n_action[ind][0])
 
 
     def reset(self):
@@ -327,7 +327,7 @@ if __name__ == "__main__":
     env.reset()
     for i in range(500):
         if i != 0:
-            action = info["next_speed_est"]
+            action = [np.array([a]) for a in info["next_speed_est"]]
             observation, reward, done, info = env.step(action,
                                                        info)
 
