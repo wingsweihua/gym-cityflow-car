@@ -107,7 +107,7 @@ class CityCarEnv(gym.Env):
         self._set_signal()
         n_obs, n_reward, n_done, n_info = self._get_description()
 
-        return n_obs
+        return n_obs, n_info
 
     def render(self, mode='human', close=False):
         pass
@@ -324,13 +324,8 @@ if __name__ == "__main__":
                  "speed", "pos_in_lane", "lane_max_speed", "if_exit_lane", "dist_to_signal", "phase", "if_leader",
                  "leader_max_pos_acc", "leader_max_neg_acc", "leader_max_speed",
                  "leader_speed", "dist_to_leader",])
-    env.reset()
+    observation, info = env.reset()
     for i in range(500):
-        if i != 0:
-            action = [np.array([a]) for a in info["next_speed_est"]]
-            observation, reward, done, info = env.step(action,
-                                                       info)
-
-        else:
-            action = []
-            observation, reward, done, info = env.step(action, {"vec_id": list(), "next_speed_est": list(), "priority": list(), "current_time": list()})
+        action = [np.array([a]) for a in info["next_speed_est"]]
+        observation, reward, done, info = env.step(action,
+                                                   info)
