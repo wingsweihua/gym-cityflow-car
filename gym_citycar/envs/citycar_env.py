@@ -32,49 +32,39 @@ class CityCarEnv(gym.Env):
     ]
 
     def __init__(self, **kwargs):
-        if "path_to_conf_file" in kwargs:
-            self.path_to_conf_file = kwargs["path_to_conf_file"]
-        else:
-            self.path_to_conf_file = os.path.join("config", "simulator", "default.json")
-        if "list_vars_to_subscribe" in kwargs:
-            self.list_vars_to_subscribe = kwargs["list_vars_to_subscribe"]
-        else:
-            self.list_vars_to_subscribe = self.LIST_VARS
+        self.path_to_conf_file = kwargs["path_to_conf_file"]
+        self.list_vars_to_subscribe = kwargs["list_vars_to_subscribe"]
         print("path to conf files", self.path_to_conf_file)
         self.eng = None
         self.dic_static_sim_params = {}
         self.signal_plan = None
         self.reset()
 
-    def step(self, action):
-
+    def step(self, n_action, n_info):
 
         current_time = self.eng.get_current_time()
         if current_time % 100 == 0:
             print(current_time)
 
         # take action
-        self._set_vehicle_speed(action)
+        self._set_vehicle_speed(n_action, n_info)
 
         # run one step
         self.eng.next_step()
 
         # observations for next step
         self._set_signal()
-        dic_obs = self._get_observations()
+        n_obs, n_reward, n_done, n_info = self._get_description()
+        # n_info: vec_id, next_speed_est, priority
 
-        r = self._get_reward()
-        dic_info = self._get_info()
+        return n_obs, n_reward, n_done, n_info # todo - "done" may need to be changed
 
-        return dic_obs, r, False, dic_info # todo - "done" may need to be changed
-
-    def _set_vehicle_speed(self, action):
+    def _set_vehicle_speed(self, n_action, n_info):
 
         # todo - no protection speed yet, decide where to add  (speed can not exceed the maximum speed allowed by the situation)
 
-        dic_info = self._get_info()
-        for vec_id, speed in action.items():
-            self.eng.set_vehicle_speed(dic_info["priority"][vec_id], speed)
+        for ind in range(len(n_action)):
+            self.eng.set_vehicle_speed(n_info["priority"][ind], n_action[ind])
 
 
     def reset(self):
@@ -83,9 +73,9 @@ class CityCarEnv(gym.Env):
         self._load_signal_plan()
 
         self._set_signal()
-        dic_obs = self._get_observations()
+        n_obs, n_reward, n_done, n_info = self._get_description()
 
-        return dic_obs
+        return n_obs
 
     def render(self, mode='human', close=False):
         pass
@@ -204,9 +194,12 @@ class CityCarEnv(gym.Env):
 
         return phase_in_bit
 
-    def _get_observations(self):
+    def _get_description(self):
 
-        dic_obs = {}
+        list_obs = []
+        list_reward = []
+        list_done = []
+        dic_info = {"vec_id": list(), "next_speed_est": list(), "priority": list(), "current_time": list(), "header": self.list_vars_to_subscribe}
 
         current_time = self.eng.get_current_time()  # return a double, time past in seconds
         lane_vehicles = self.eng.get_lane_vehicles()  # return a dict, {lane_id: [vehicle1_id, vehicle2_id, ...], ...}
@@ -214,6 +207,9 @@ class CityCarEnv(gym.Env):
         vehicle_distance = self.eng.get_vehicle_distance()  # return a dict, {vehicle_id: vehicle_distance, ...}
         distance_to_leader = self.eng.get_vehicle_gap()
         vehicle_leaders = self.eng.get_vehicle_leader()
+
+        vehicle_next_speed = self.eng.get_vehicle_next_speed()
+        vehicle_priority = self.eng.get_vehicle_priority()
 
         for lane_id, lane_vec in lane_vehicles.items():
             for vec_id in lane_vec:
@@ -231,6 +227,8 @@ class CityCarEnv(gym.Env):
                     # sys.exit()
 
                 # =================== current vehicle informations =====================
+
+                dic_vec["vec_id"] = vec_id
 
                 # simulation params
                 dic_vec["interval"] = self.dic_static_sim_params["interval"]
@@ -267,33 +265,40 @@ class CityCarEnv(gym.Env):
 
                 # =================== leader vehicle informations =====================
 
-                dic_obs[vec_id] = dic_vec.copy()
+                dic_vec["next_speed_est"] = max(vehicle_next_speed[vec_id], 0)
+                dic_vec["priority"] = vehicle_priority[vec_id]
 
-        return dic_obs
+                obs = np.array([dic_vec[_] for _ in self.list_vars_to_subscribe])
+                r = 0
+                done = False
+                dic_info["vec_id"].append(dic_vec["vec_id"])
+                dic_info["next_speed_est"].append(dic_vec["next_speed_est"])
+                dic_info["priority"].append(dic_vec["priority"])
+                dic_info["current_time"].append(dic_vec["current_time"])
 
-    def _get_reward(self):
+                list_obs.append(obs)
+                list_reward.append(r)
+                list_done.append(done)
 
-        pass
+        return list_obs, list_reward, list_done, dic_info
 
-    def _get_info(self):
-
-        vehicle_next_speed = self.eng.get_vehicle_next_speed()
-        vehicle_priority = self.eng.get_vehicle_priority()
-
-        return {"next_speed": vehicle_next_speed, "priority": vehicle_priority}
 
 
 if __name__ == "__main__":
 
-    env = CityCarEnv()
-    for i in range(3600):
-        # observation: {key: value}
-        # reward: float
-        # done: bool
-        # info:
-        # action: {vec_id: vec_next_speed}
+    env = CityCarEnv(path_to_conf_file=os.path.join("config", "simulator", "default.json"),
+                     list_vars_to_subscribe=["interval",
+                 "max_pos_acc", "max_neg_acc", "max_speed", "min_gap", "headway_time",
+                 "speed", "pos_in_lane", "lane_max_speed", "if_exit_lane", "dist_to_signal", "phase", "if_leader",
+                 "leader_max_pos_acc", "leader_max_neg_acc", "leader_max_speed",
+                 "leader_speed", "dist_to_leader",])
+    env.reset()
+    for i in range(500):
         if i != 0:
-            action = info["next_speed"]
+            action = info["next_speed_est"]
+            observation, reward, done, info = env.step(action,
+                                                       info)
+
         else:
-            action = {}
-        observation, reward, done, info = env.step(action)
+            action = []
+            observation, reward, done, info = env.step(action, {"vec_id": list(), "next_speed_est": list(), "priority": list(), "current_time": list()})
