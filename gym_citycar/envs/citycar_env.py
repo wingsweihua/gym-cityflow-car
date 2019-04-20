@@ -68,6 +68,7 @@ class CityCarEnv(gym.Env):
             high=np.array([self.dic_feature_range[_][1] for _ in self.list_vars_to_subscribe]),
             dtype=np.float32)
         self.observation_header = self.list_vars_to_subscribe
+        self.action_header = ["action"]
         self.reset()
 
 
