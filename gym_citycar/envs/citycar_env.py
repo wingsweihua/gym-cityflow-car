@@ -87,8 +87,10 @@ class CityCarEnv(gym.Env):
 
         # observations for next step
         self._set_signal()
-        n_obs, n_reward, n_done, n_info = self._get_description()
+        n_obs, n_reward, n_info = self._get_description()
+        n_done = [False for _ in range(len(n_action))]
         # n_info: vec_id, next_speed_est, priority, current_time, lane_id
+
 
         return n_obs, n_reward, n_done, n_info # todo - "done" may need to be changed
 
@@ -106,7 +108,7 @@ class CityCarEnv(gym.Env):
         self._load_signal_plan()
 
         self._set_signal()
-        n_obs, n_reward, n_done, n_info = self._get_description()
+        n_obs, n_reward, n_info = self._get_description()
 
         return n_obs, n_info
 
@@ -231,7 +233,6 @@ class CityCarEnv(gym.Env):
 
         list_obs = []
         list_reward = []
-        list_done = []
         dic_info = {"vec_id": list(), "next_speed_est": list(), "priority": list(), "current_time": list(), "lane_id": list()}
 
         current_time = self.eng.get_current_time()  # return a double, time past in seconds
@@ -312,9 +313,8 @@ class CityCarEnv(gym.Env):
 
                 list_obs.append(obs)
                 list_reward.append(r)
-                list_done.append(done)
 
-        return list_obs, list_reward, list_done, dic_info
+        return list_obs, list_reward, dic_info
 
 
 
