@@ -76,8 +76,8 @@ class CityCarEnv(gym.Env):
     def step(self, n_action, n_info):
 
         current_time = self.eng.get_current_time()
-        if current_time % 100 == 0:
-            print(current_time)
+        # if current_time % 100 == 0:
+        #     print(current_time)
 
         # take action
         self._set_vehicle_speed(n_action, n_info)
@@ -126,8 +126,8 @@ class CityCarEnv(gym.Env):
 
         dic_conf = json.load(open(self.path_to_conf_file, "r"))
         path_to_signal_plan_file = os.path.join(dic_conf["dir"], dic_conf["signalPlanFile"])
-        print(path_to_signal_plan_file)
-        print(os.getcwd())
+        # print(path_to_signal_plan_file)
+        # print(os.getcwd())
         self.signal_plan = pd.read_csv(path_to_signal_plan_file, sep="\t", header=0, dtype=int)
 
     def _set_signal(self):
