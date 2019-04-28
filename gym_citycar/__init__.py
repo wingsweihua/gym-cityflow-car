@@ -11,5 +11,6 @@ register(
                  "speed", "pos_in_lane", "lane_max_speed", "if_exit_lane", "dist_to_signal", "phase", "if_leader",
                  "leader_max_pos_acc", "leader_max_neg_acc", "leader_max_speed",
                  "leader_speed", "dist_to_leader",],
-            "normalize": False}
+            "normalize": False,
+            "max_time_step": 500}
 )

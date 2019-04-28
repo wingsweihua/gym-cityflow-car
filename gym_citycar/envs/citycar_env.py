@@ -64,6 +64,7 @@ class CityCarEnv(gym.Env):
         self.path_to_conf_file = kwargs["path_to_conf_file"]
         self.list_vars_to_subscribe = kwargs["list_vars_to_subscribe"]
         self.normalize = kwargs["normalize"]
+        self.max_time_step = kwargs["max_time_step"]
         print("path to conf files", self.path_to_conf_file)
         self.eng = None
         self.dic_static_sim_params = {}
@@ -100,14 +101,35 @@ class CityCarEnv(gym.Env):
         # run one step
         self.eng.next_step()
 
+        # check whether this traj is done
+        n_done = self._check_done(n_info)
+
         # observations for next step
         self._set_signal()
         n_obs, n_reward, n_info = self._get_description()
-        n_done = [False for _ in range(len(n_action))]
         # n_info: vec_id, next_speed_est, priority, current_time, lane_id
 
 
-        return n_obs, n_reward, n_done, n_info # todo - "done" may need to be changed
+        return n_obs, n_reward, n_done, n_info
+
+
+    def _check_done(self, n_info):
+
+        if self.eng.get_current_time() == self.max_time_step:
+            return [True for _ in n_info["vec_id"]]
+
+        lane_vehicles = self.eng.get_lane_vehicles()  # return a dict, {lane_id: [vehicle1_id, vehicle2_id, ...], ...}
+        all_vehicles = []
+        for item in lane_vehicles.values():
+            all_vehicles += item
+        all_vehicles = set(all_vehicles)
+        n_done = []
+        for v_id in n_info["vec_id"]:
+            if v_id not in all_vehicles:
+                n_done.append(True)
+            else:
+                n_done.append(False)
+        return n_done
 
     def _set_vehicle_speed(self, n_action, n_info):
 
@@ -357,9 +379,11 @@ if __name__ == "__main__":
                  "speed", "pos_in_lane", "lane_max_speed", "if_exit_lane", "dist_to_signal", "phase", "if_leader",
                  "leader_max_pos_acc", "leader_max_neg_acc", "leader_max_speed",
                  "leader_speed", "dist_to_leader",],
-                     normalize=True)
+                     normalize=True,
+                     max_time_step=500)
     observation, info = env.reset()
     for i in range(500):
         action = [np.array([a]) for a in info["next_speed_est"]]
         observation, reward, done, info = env.step(action,
                                                    info)
+
