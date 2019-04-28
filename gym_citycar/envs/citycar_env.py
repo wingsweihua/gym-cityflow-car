@@ -50,23 +50,38 @@ class CityCarEnv(gym.Env):
         "leader_max_speed": (0, 20),
         "leader_speed": (0, 20),
         "dist_to_leader": (0, 1000),
+        "next_speed_est": (0, 20)
     }
+
+    INF_SPEED = dic_feature_range["speed"][1]
+    INF_POS_ACC = dic_feature_range["max_pos_acc"][1]
+    INF_NEG_ACC = dic_feature_range["max_neg_acc"][1]
+    INF_DIST = dic_feature_range["dist_to_leader"][1]
 
     action_range = (0, 20)
 
     def __init__(self, **kwargs):
         self.path_to_conf_file = kwargs["path_to_conf_file"]
         self.list_vars_to_subscribe = kwargs["list_vars_to_subscribe"]
+        self.normalize = kwargs["normalize"]
         print("path to conf files", self.path_to_conf_file)
         self.eng = None
         self.dic_static_sim_params = {}
         self.signal_plan = None
 
-        self.action_space = spaces.Box(low=np.array([self.action_range[0]]), high=np.array([self.action_range[1]]), dtype=np.float32)
-        self.observation_space = spaces.Box(
-            low=np.array([self.dic_feature_range[_][0] for _ in self.list_vars_to_subscribe]),
-            high=np.array([self.dic_feature_range[_][1] for _ in self.list_vars_to_subscribe]),
-            dtype=np.float32)
+        if not self.normalize:
+            self.action_space = spaces.Box(low=np.array([self.action_range[0]]), high=np.array([self.action_range[1]]), dtype=np.float32)
+            self.observation_space = spaces.Box(
+                low=np.array([self.dic_feature_range[_][0] for _ in self.list_vars_to_subscribe]),
+                high=np.array([self.dic_feature_range[_][1] for _ in self.list_vars_to_subscribe]),
+                dtype=np.float32)
+        else:
+            self.action_space = spaces.Box(low=np.zeros_like([self.action_range[0]]), high=np.ones_like([self.action_range[1]]),
+                                           dtype=np.float32)
+            self.observation_space = spaces.Box(
+                low=np.zeros_like([self.dic_feature_range[_][0] for _ in self.list_vars_to_subscribe]),
+                high=np.ones_like([self.dic_feature_range[_][1] for _ in self.list_vars_to_subscribe]),
+                dtype=np.float32)
         self.observation_header = self.list_vars_to_subscribe
         self.action_header = ["action"]
         self.reset()
@@ -99,7 +114,11 @@ class CityCarEnv(gym.Env):
         # todo - no protection speed yet, decide where to add  (speed can not exceed the maximum speed allowed by the situation)
 
         for ind in range(len(n_action)):
-            self.eng.set_vehicle_speed(n_info["priority"][ind], n_action[ind][0])
+            if not self.normalize:
+                speed = n_action[ind][0]
+            else:
+                speed = n_action[ind][0] * self.dic_feature_range["speed"][1]
+            self.eng.set_vehicle_speed(n_info["priority"][ind], speed)
 
 
     def reset(self):
@@ -290,17 +309,29 @@ class CityCarEnv(gym.Env):
                 # =================== leader vehicle informations =====================
 
                 # leader vehicle static params todo - pay attention to the default values
-                dic_vec["leader_max_pos_acc"] = self.dic_static_sim_params["flow_params"][self._get_vec_flow(leader)]["max_pos_acc"] if leader != '' else 100
-                dic_vec["leader_max_neg_acc"] = self.dic_static_sim_params["flow_params"][self._get_vec_flow(leader)]["max_neg_acc"] if leader != '' else 100
-                dic_vec["leader_max_speed"] = self.dic_static_sim_params["flow_params"][self._get_vec_flow(leader)]["max_speed"] if leader != '' else 100
+                dic_vec["leader_max_pos_acc"] = self.dic_static_sim_params["flow_params"][self._get_vec_flow(leader)]["max_pos_acc"] if leader != '' else self.INF_POS_ACC
+                dic_vec["leader_max_neg_acc"] = self.dic_static_sim_params["flow_params"][self._get_vec_flow(leader)]["max_neg_acc"] if leader != '' else self.INF_NEG_ACC
+                dic_vec["leader_max_speed"] = self.dic_static_sim_params["flow_params"][self._get_vec_flow(leader)]["max_speed"] if leader != '' else self.INF_SPEED
                 # leader vehicle dynamic obs
-                dic_vec["leader_speed"] = vehicle_speed[leader] if leader != '' else 100
-                dic_vec["dist_to_leader"] = dist_tl if leader != '' else 100
+                dic_vec["leader_speed"] = vehicle_speed[leader] if leader != '' else self.INF_SPEED
+                dic_vec["dist_to_leader"] = dist_tl if leader != '' else self.INF_DIST
 
                 # =================== leader vehicle informations =====================
 
                 dic_vec["next_speed_est"] = max(vehicle_next_speed[vec_id], 0)
                 dic_vec["priority"] = vehicle_priority[vec_id]
+
+
+                # =================== normalize ==================
+                if self.normalize:
+                    for key, value in dic_vec.items():
+                        try:
+                            dic_vec[key] = value/self.dic_feature_range[key][1]
+                        except KeyError:
+                            continue
+
+
+                # =================== put the obs, reward and info to returns ==========
 
                 obs = np.array([dic_vec[_] for _ in self.list_vars_to_subscribe])
                 r = 0
@@ -325,7 +356,8 @@ if __name__ == "__main__":
                  "max_pos_acc", "max_neg_acc", "max_speed", "min_gap", "headway_time",
                  "speed", "pos_in_lane", "lane_max_speed", "if_exit_lane", "dist_to_signal", "phase", "if_leader",
                  "leader_max_pos_acc", "leader_max_neg_acc", "leader_max_speed",
-                 "leader_speed", "dist_to_leader",])
+                 "leader_speed", "dist_to_leader",],
+                     normalize=True)
     observation, info = env.reset()
     for i in range(500):
         action = [np.array([a]) for a in info["next_speed_est"]]
