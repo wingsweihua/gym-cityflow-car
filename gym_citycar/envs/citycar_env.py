@@ -110,11 +110,22 @@ class CityCarEnv(gym.Env):
 
         # observations for next step
         self._set_signal()
-        n_obs, n_reward, n_info = self._get_description()
+        next_n_obs, next_n_reward, next_n_info = self._get_description()
         # n_info: vec_id, next_speed_est, priority, current_time, lane_id
 
+        n_reward = []
+        for ind in range(len(n_done)):
+            if n_done[ind]:
+                n_reward.append(lambda_dist)
+                continue
+            try:
+                n_reward.append(
+                    next_n_reward[next_n_info["vec_id"].index(n_info["vec_id"][ind])])
+            except ValueError:
+                sys.exit()
+                n_reward.append(lambda_dist)
 
-        return n_obs, n_reward, n_done, n_info
+        return next_n_obs, n_reward, n_done, next_n_info
 
 
     def _check_done(self, n_info):
