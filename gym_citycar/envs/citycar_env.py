@@ -9,6 +9,10 @@ import pandas as pd
 import numpy as np
 import math
 
+SPEED_THRES_FOR_REWARD = 0.5555
+DIST_THRES_FOR_REWARD = 0.025
+lambda_dist = 0.5
+
 class CityCarEnv(gym.Env):
 
     LIST_VARS = [
@@ -356,7 +360,7 @@ class CityCarEnv(gym.Env):
                 # =================== put the obs, reward and info to returns ==========
 
                 obs = np.array([dic_vec[_] for _ in self.list_vars_to_subscribe])
-                r = 0
+                r = self.cal_reward(dic_vec)
                 done = False
                 dic_info["vec_id"].append(dic_vec["vec_id"])
                 dic_info["next_speed_est"].append(dic_vec["next_speed_est"])
@@ -369,6 +373,27 @@ class CityCarEnv(gym.Env):
 
         return list_obs, list_reward, dic_info
 
+    @staticmethod
+    def cal_reward(dic_vec):
+        # calculate reward from observation
+        speed = dic_vec["speed"]
+        d = dic_vec["dist_to_leader"]
+
+        # try:
+        #     max_speed = dic_vec["max_speed"]
+        # except KeyError:
+        #     max_speed = 0.5555
+        # try:
+        #     lane_max_speed = dic_vec["lane_max_speed"]
+        # except KeyError:
+        #     lane_max_speed = 0.5555
+        #
+        # max_possible_speed = np.min([SPEED_THRES_FOR_REWARD, max_speed, lane_max_speed, dic_vec["next_speed_est"])
+
+        d = min(d, 0.05)
+        r = (speed / SPEED_THRES_FOR_REWARD - 1) + lambda_dist * (d / DIST_THRES_FOR_REWARD - 1)
+
+        return r
 
 
 if __name__ == "__main__":
