@@ -187,6 +187,8 @@ class CityCarEnv(gym.Env):
         self.signal_plan = pd.read_csv(path_to_signal_plan_file, sep="\t", header=0, dtype=int)
 
     def _set_signal(self):
+        # current_time = self.eng.get_current_time()
+        # print(self.signal_plan.iloc[:,int(current_time-1)])
         for inter_id in self.signal_plan.columns:
             self.eng.set_tl_phase(inter_id,
                                   self._get_current_phase(inter_id))
@@ -409,7 +411,7 @@ class CityCarEnv(gym.Env):
 
 if __name__ == "__main__":
 
-    env = CityCarEnv(path_to_conf_file=os.path.join("config", "simulator", "default.json"),
+    env = CityCarEnv(path_to_conf_file=os.path.join("config", "simulator", "4x4.json"),
                      list_vars_to_subscribe=["interval",
                  "max_pos_acc", "max_neg_acc", "max_speed", "min_gap", "headway_time",
                  "speed", "pos_in_lane", "lane_max_speed", "if_exit_lane", "dist_to_signal", "phase", "if_leader",
@@ -419,6 +421,7 @@ if __name__ == "__main__":
                      max_time_step=500)
     observation, info = env.reset()
     for i in range(500):
+        print(i)
         action = [np.array([a]) for a in info["next_speed_est"]]
         observation, reward, done, info = env.step(action,
                                                    info)
