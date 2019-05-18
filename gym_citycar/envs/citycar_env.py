@@ -69,7 +69,7 @@ class CityCarEnv(gym.Env):
         self.list_vars_to_subscribe = kwargs["list_vars_to_subscribe"]
         self.normalize = kwargs["normalize"]
         self.max_time_step = kwargs["max_time_step"]
-        print("path to conf files", self.path_to_conf_file)
+        # print("path to conf files", self.path_to_conf_file)
         self.eng = None
         self.dic_static_sim_params = {}
         self.signal_plan = None
