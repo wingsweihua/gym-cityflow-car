@@ -384,7 +384,23 @@ class CityCarEnv(gym.Env):
                 list_obs.append(obs)
                 list_reward.append(r)
 
+        for ind_i in range(len(list_obs)):
+            for ind_j in range(len(list_obs[ind_i])):
+                list_obs[ind_i][ind_j] = self.mask_strange_values(list_obs[ind_i][ind_j])
+
+        for ind_i in range(len(list_reward)):
+            list_reward[ind_i] = self.mask_strange_values(list_reward[ind_i])
+
         return list_obs, list_reward, dic_info
+
+    @staticmethod
+    def mask_strange_values(v):
+        if v > 0 and v < 1e-10:
+            return 0
+        else:
+            return v
+
+
 
     @staticmethod
     def cal_reward(dic_vec):
