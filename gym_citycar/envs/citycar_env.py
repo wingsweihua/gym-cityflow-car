@@ -373,6 +373,14 @@ class CityCarEnv(gym.Env):
 
                 # =================== put the obs, reward and info to returns ==========
 
+
+                for key in dic_vec:
+                    try:
+                        dic_vec[key] = self.mask_strange_values(dic_vec[key], self.dic_feature_range[key][1])
+                    except KeyError:
+                        continue
+                        # this is not a numerical value; fine, continue
+
                 obs = np.array([dic_vec[_] for _ in self.list_vars_to_subscribe])
                 r, r_dist, r_speed = self.cal_reward(dic_vec)
                 done = False
@@ -387,10 +395,6 @@ class CityCarEnv(gym.Env):
                 dic_info["r_dist"].append(r_dist)
                 dic_info["r_sp"].append(r_speed)
 
-
-                for ind_j in range(len(obs)):
-                    obs[ind_j] = self.mask_strange_values(obs[ind_j], self.dic_feature_range[
-                        self.list_vars_to_subscribe[ind_j]][1])
                 r = self.mask_strange_values(r, -1)
 
                 list_obs.append(obs)
@@ -410,7 +414,13 @@ class CityCarEnv(gym.Env):
         if np.isnan(v):
             return thres
         if v > 0 and v < 1e-10:
-            return 0
+            return thres
+        elif v > 0 and v > 1e5:
+            return thres
+        elif v < 0 and v > -1e-10:
+            return thres
+        elif v < 0 and v < -1e5:
+            return thres
         else:
             return v
 
@@ -433,14 +443,19 @@ class CityCarEnv(gym.Env):
         #
         # max_possible_speed = np.min([SPEED_THRES_FOR_REWARD, max_speed, lane_max_speed, dic_vec["next_speed_est"])
 
-        if d < DIST_THRES_FOR_REWARD:
-            r_dist = - pow((d / DIST_THRES_FOR_REWARD - 1), 2)
-            r_speed = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
-            r = r_dist + r_speed
-        else:
-            r_dist = 0
-            r_speed = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
-            r = r_speed
+        try:
+
+            if d < DIST_THRES_FOR_REWARD:
+                r_dist = - pow((d / DIST_THRES_FOR_REWARD - 1), 2)
+                r_speed = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
+                r = r_dist + r_speed
+            else:
+                r_dist = 0
+                r_speed = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
+                r = r_speed
+        except OverflowError:
+            print(dic_vec)
+            sys.exit()
 
         return r, r_dist, r_speed
 
