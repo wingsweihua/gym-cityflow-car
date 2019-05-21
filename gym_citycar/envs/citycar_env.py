@@ -11,7 +11,7 @@ import math
 
 SPEED_THRES_FOR_REWARD = 0.5555
 DIST_THRES_FOR_REWARD = 0.025
-lambda_dist = 0.5
+lambda_dist = 0.008
 
 class CityCarEnv(gym.Env):
 
@@ -381,20 +381,27 @@ class CityCarEnv(gym.Env):
                 dic_info["current_time"].append(dic_vec["current_time"])
                 dic_info["lane_id"].append(dic_vec["lane_id"])
 
+                for ind_j in range(len(obs)):
+                    obs[ind_j] = self.mask_strange_values(obs[ind_j], self.dic_feature_range[
+                        self.list_vars_to_subscribe[ind_j]][1])
+                r = self.mask_strange_values(r, -1)
+
                 list_obs.append(obs)
                 list_reward.append(r)
 
-        for ind_i in range(len(list_obs)):
-            for ind_j in range(len(list_obs[ind_i])):
-                list_obs[ind_i][ind_j] = self.mask_strange_values(list_obs[ind_i][ind_j])
-
-        for ind_i in range(len(list_reward)):
-            list_reward[ind_i] = self.mask_strange_values(list_reward[ind_i])
+        # for ind_i in range(len(list_obs)):
+        #     for ind_j in range(len(list_obs[ind_i])):
+        #         list_obs[ind_i][ind_j] = self.mask_strange_values(list_obs[ind_i][ind_j], self.dic_feature_range[self.list_vars_to_subscribe[ind_j]][1])
+        #
+        # for ind_i in range(len(list_reward)):
+        #     list_reward[ind_i] = self.mask_strange_values(list_reward[ind_i], -1)
 
         return list_obs, list_reward, dic_info
 
     @staticmethod
-    def mask_strange_values(v):
+    def mask_strange_values(v, thres):
+        if np.isnan(v):
+            return thres
         if v > 0 and v < 1e-10:
             return 0
         else:
@@ -419,8 +426,11 @@ class CityCarEnv(gym.Env):
         #
         # max_possible_speed = np.min([SPEED_THRES_FOR_REWARD, max_speed, lane_max_speed, dic_vec["next_speed_est"])
 
-        d = min(d, 0.05)
-        r = (speed / SPEED_THRES_FOR_REWARD - 1) + lambda_dist * (d / DIST_THRES_FOR_REWARD - 1)
+        if d == 1:
+            r = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
+        else:
+            d = min(0.3, d)
+            r = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2) - lambda_dist * pow((d / DIST_THRES_FOR_REWARD - 1), 2)
 
         return r
 
