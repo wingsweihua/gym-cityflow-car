@@ -11,7 +11,7 @@ import math
 
 SPEED_THRES_FOR_REWARD = 0.5555
 DIST_THRES_FOR_REWARD = 0.025
-lambda_dist = 0.008
+REWARD_DEFAULT = 0
 
 class CityCarEnv(gym.Env):
 
@@ -116,14 +116,14 @@ class CityCarEnv(gym.Env):
         n_reward = []
         for ind in range(len(n_done)):
             if n_done[ind]:
-                n_reward.append(lambda_dist)
+                n_reward.append(REWARD_DEFAULT)
                 continue
             try:
                 n_reward.append(
                     next_n_reward[next_n_info["vec_id"].index(n_info["vec_id"][ind])])
             except ValueError:
                 sys.exit()
-                n_reward.append(lambda_dist)
+                n_reward.append(REWARD_DEFAULT)
 
         return next_n_obs, n_reward, n_done, next_n_info
 
@@ -291,7 +291,8 @@ class CityCarEnv(gym.Env):
 
         list_obs = []
         list_reward = []
-        dic_info = {"vec_id": list(), "next_speed_est": list(), "priority": list(), "current_time": list(), "lane_id": list()}
+        dic_info = {"vec_id": list(), "next_speed_est": list(), "priority": list(), "current_time": list(), "lane_id": list(),
+                    "dist": list(), "sp": list(), "r_dist": list(), "r_sp": list()}
 
         current_time = self.eng.get_current_time()  # return a double, time past in seconds
         lane_vehicles = self.eng.get_lane_vehicles()  # return a dict, {lane_id: [vehicle1_id, vehicle2_id, ...], ...}
@@ -373,13 +374,19 @@ class CityCarEnv(gym.Env):
                 # =================== put the obs, reward and info to returns ==========
 
                 obs = np.array([dic_vec[_] for _ in self.list_vars_to_subscribe])
-                r = self.cal_reward(dic_vec)
+                r, r_dist, r_speed = self.cal_reward(dic_vec)
                 done = False
                 dic_info["vec_id"].append(dic_vec["vec_id"])
                 dic_info["next_speed_est"].append(dic_vec["next_speed_est"])
                 dic_info["priority"].append(dic_vec["priority"])
                 dic_info["current_time"].append(dic_vec["current_time"])
                 dic_info["lane_id"].append(dic_vec["lane_id"])
+
+                dic_info["dist"].append(dic_vec["dist_to_leader"])
+                dic_info["sp"].append(dic_vec["speed"])
+                dic_info["r_dist"].append(r_dist)
+                dic_info["r_sp"].append(r_speed)
+
 
                 for ind_j in range(len(obs)):
                     obs[ind_j] = self.mask_strange_values(obs[ind_j], self.dic_feature_range[
@@ -426,13 +433,16 @@ class CityCarEnv(gym.Env):
         #
         # max_possible_speed = np.min([SPEED_THRES_FOR_REWARD, max_speed, lane_max_speed, dic_vec["next_speed_est"])
 
-        if d == 1:
-            r = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
+        if d < DIST_THRES_FOR_REWARD:
+            r_dist = - pow((d / DIST_THRES_FOR_REWARD - 1), 2)
+            r_speed = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
+            r = r_dist + r_speed
         else:
-            d = min(0.3, d)
-            r = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2) - lambda_dist * pow((d / DIST_THRES_FOR_REWARD - 1), 2)
+            r_dist = 0
+            r_speed = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
+            r = r_speed
 
-        return r
+        return r, r_dist, r_speed
 
 
 if __name__ == "__main__":
