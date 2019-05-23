@@ -12,5 +12,6 @@ register(
                  "leader_max_pos_acc", "leader_max_neg_acc", "leader_max_speed",
                  "leader_speed", "dist_to_leader",],
             "normalize": False,
-            "max_time_step": 500}
+            "max_time_step": 500,
+            "reward_function": 0}
 )

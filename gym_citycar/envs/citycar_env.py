@@ -73,6 +73,7 @@ class CityCarEnv(gym.Env):
         self.eng = None
         self.dic_static_sim_params = {}
         self.signal_plan = None
+        self.reward_function = kwargs["reward_function"]
 
         if not self.normalize:
             self.action_space = spaces.Box(low=np.array([self.action_range[0]]), high=np.array([self.action_range[1]]), dtype=np.float32)
@@ -425,12 +426,11 @@ class CityCarEnv(gym.Env):
             return v
 
 
-
-    @staticmethod
-    def cal_reward(dic_vec):
+    def cal_reward(self, dic_vec):
         # calculate reward from observation
         speed = dic_vec["speed"]
         d = dic_vec["dist_to_leader"]
+        next_speed_est = dic_vec["next_speed_est"]
 
         # try:
         #     max_speed = dic_vec["max_speed"]
@@ -444,15 +444,27 @@ class CityCarEnv(gym.Env):
         # max_possible_speed = np.min([SPEED_THRES_FOR_REWARD, max_speed, lane_max_speed, dic_vec["next_speed_est"])
 
         try:
-
-            if d < DIST_THRES_FOR_REWARD:
-                r_dist = - pow((d / DIST_THRES_FOR_REWARD - 1), 2)
-                r_speed = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
-                r = r_dist + r_speed
+            if self.reward_function == 1:
+                if d < DIST_THRES_FOR_REWARD:
+                    r_dist = - pow((d / DIST_THRES_FOR_REWARD - 1), 2)
+                    r_speed = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
+                    r = r_dist + r_speed
+                else:
+                    r_dist = 0
+                    r_speed = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
+                    r = r_speed
+            elif self.reward_function == 2:
+                if d < DIST_THRES_FOR_REWARD:
+                    r_dist = - pow((d / DIST_THRES_FOR_REWARD - 1), 2)
+                    r_speed = - pow((speed - next_speed_est) / SPEED_THRES_FOR_REWARD, 2)
+                    r = r_dist + r_speed
+                else:
+                    r_dist = 0
+                    r_speed = - pow((speed - next_speed_est) / SPEED_THRES_FOR_REWARD, 2)
+                    r = r_speed
             else:
-                r_dist = 0
-                r_speed = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
-                r = r_speed
+                raise NotImplementedError
+
         except OverflowError:
             print(dic_vec)
             sys.exit()
@@ -469,7 +481,8 @@ if __name__ == "__main__":
                  "leader_max_pos_acc", "leader_max_neg_acc", "leader_max_speed",
                  "leader_speed", "dist_to_leader",],
                      normalize=True,
-                     max_time_step=500)
+                     max_time_step=500,
+                     reward_function=2)
     observation, info = env.reset()
     for i in range(500):
         print(i)
