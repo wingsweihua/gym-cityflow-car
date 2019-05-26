@@ -12,6 +12,8 @@ import math
 SPEED_THRES_FOR_REWARD = 0.5555
 DIST_THRES_FOR_REWARD = 0.025
 REWARD_DEFAULT = 0
+NEGACC = 0.2
+POSACC = 0.1
 
 class CityCarEnv(gym.Env):
 
@@ -429,8 +431,12 @@ class CityCarEnv(gym.Env):
     def cal_reward(self, dic_vec):
         # calculate reward from observation
         speed = dic_vec["speed"]
+        speed_lead = dic_vec["leader_speed"]
         d = dic_vec["dist_to_leader"]
+        interval = dic_vec["interval"]
         next_speed_est = dic_vec["next_speed_est"]
+        if_leader = dic_vec["if_leader"]
+        if_green = dic_vec["phase"]
 
         # try:
         #     max_speed = dic_vec["max_speed"]
@@ -445,14 +451,25 @@ class CityCarEnv(gym.Env):
 
         try:
             if self.reward_function == 1:
+
+                if if_green:
+                    speed_ref = SPEED_THRES_FOR_REWARD
+                else:
+                    if if_leader:
+                        speed_ref = speed_lead
+                    elif d < DIST_THRES_FOR_REWARD:
+                        speed_ref = 0
+                    else:
+                        speed_ref = speed
+                r_speed = - pow((speed - speed_ref) / SPEED_THRES_FOR_REWARD, 2)
+
                 if d < DIST_THRES_FOR_REWARD:
                     r_dist = - pow((d / DIST_THRES_FOR_REWARD - 1), 2)
-                    r_speed = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
-                    r = r_dist + r_speed
                 else:
                     r_dist = 0
-                    r_speed = - pow((speed / SPEED_THRES_FOR_REWARD - 1), 2)
-                    r = r_speed
+
+                r = r_speed + r_dist
+
             elif self.reward_function == 2:
                 if d < DIST_THRES_FOR_REWARD:
                     r_dist = - pow((d / DIST_THRES_FOR_REWARD - 1), 2)
@@ -462,6 +479,37 @@ class CityCarEnv(gym.Env):
                     r_dist = 0
                     r_speed = - pow((speed - next_speed_est) / SPEED_THRES_FOR_REWARD, 2)
                     r = r_speed
+
+            elif self.reward_function == 3:
+                r_dist = 0,
+                r_speed = - pow((speed - next_speed_est) / SPEED_THRES_FOR_REWARD, 2)
+                r = r_speed
+
+            elif self.reward_function == 4:
+                r_dist = 0,
+                cc = speed * interval / 2 - speed_lead ** 2 / (2 * NEGACC) - d
+                aa = 1 / (2 * NEGACC)
+                bb = interval / 2
+                speed_safe = (- bb + abs(bb ** 2 - 4 * aa * cc) ** 0.5) / (2 * aa)
+                speed_desire = min(SPEED_THRES_FOR_REWARD, speed + POSACC * interval, speed_safe)
+                r_speed = - pow((speed - speed_desire) / SPEED_THRES_FOR_REWARD, 2)
+                r = r_speed
+                
+            elif self.reward_function == 5:
+                ColiTimeRef = 2
+                if speed > speed_lead:
+                    ColiTime = d * 1000 / ((speed - speed_lead) * 20)
+                    if ColiTime <= ColiTimeRef:
+                        r_dist = - pow((ColiTime / ColiTimeRef - 1), 2)
+                    else:
+                        r_dist = 0
+                else:
+                    r_dist = 0
+                if if_leader:
+                    r_speed = - pow((speed - speed_lead), 2)
+                else:
+                    r_speed = 0
+                r = r_speed
             else:
                 raise NotImplementedError
 
