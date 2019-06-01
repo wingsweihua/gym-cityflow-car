@@ -233,15 +233,18 @@ class CityCarEnv(gym.Env):
             dic_inter_params = dict()
             dic_inter_params["virtual"] = inter["virtual"]
             dic_inter_params["phase_allowed_lanes"] = {}
-            road_links = inter["roadLinks"]
-            for ind_phase, signal_phase in enumerate(inter["trafficLight"]["lightphases"]):
-                this_phase_allowed_lanes = []
-                for link in signal_phase["availableRoadLinks"]:
-                    # add one link
-                    rl = road_links[link]
-                    this_phase_allowed_lanes += ["{0}_{1}".format(rl["startRoad"], ll["startLaneIndex"]) for ll in rl["laneLinks"]]
-                this_phase_allowed_lanes = np.unique(this_phase_allowed_lanes).tolist()
-                dic_inter_params["phase_allowed_lanes"][ind_phase] = this_phase_allowed_lanes.copy()
+            try:
+                road_links = inter["roadLinks"]
+                for ind_phase, signal_phase in enumerate(inter["trafficLight"]["lightphases"]):
+                    this_phase_allowed_lanes = []
+                    for link in signal_phase["availableRoadLinks"]:
+                        # add one link
+                        rl = road_links[link]
+                        this_phase_allowed_lanes += ["{0}_{1}".format(rl["startRoad"], ll["startLaneIndex"]) for ll in rl["laneLinks"]]
+                    this_phase_allowed_lanes = np.unique(this_phase_allowed_lanes).tolist()
+                    dic_inter_params["phase_allowed_lanes"][ind_phase] = this_phase_allowed_lanes.copy()
+            except KeyError:
+                continue
             self.dic_static_sim_params["intersection_params"][inter_id] = dic_inter_params.copy()
 
         # get lane params
@@ -258,7 +261,10 @@ class CityCarEnv(gym.Env):
                 dic_lane_params = dict()
                 dic_lane_params["max_speed"] = lane["maxSpeed"]
                 dic_lane_params["facing_intersection"] = self._cal_facing_inter(lane_id)
-                dic_lane_params["if_exit_lane"] = 1 if self.dic_static_sim_params["intersection_params"][dic_lane_params["facing_intersection"]]["virtual"] else 0
+                try:
+                    dic_lane_params["if_exit_lane"] = 1 if self.dic_static_sim_params["intersection_params"][dic_lane_params["facing_intersection"]]["virtual"] else 0
+                except KeyError:
+                    dic_lane_params["if_exit_lane"] = 1
                 dic_lane_params["length"] = road_length
                 self.dic_static_sim_params["lane_params"][lane_id] = dic_lane_params.copy()
 
@@ -522,7 +528,7 @@ class CityCarEnv(gym.Env):
 
 if __name__ == "__main__":
 
-    env = CityCarEnv(path_to_conf_file=os.path.join("config", "simulator", "4x4.json"),
+    env = CityCarEnv(path_to_conf_file=os.path.join("config", "simulator", "LA.json"),
                      list_vars_to_subscribe=["interval",
                  "max_pos_acc", "max_neg_acc", "max_speed", "min_gap", "headway_time",
                  "speed", "pos_in_lane", "lane_max_speed", "if_exit_lane", "dist_to_signal", "phase", "if_leader",
@@ -532,7 +538,7 @@ if __name__ == "__main__":
                      max_time_step=500,
                      reward_function=2)
     observation, info = env.reset()
-    for i in range(500):
+    for i in range(300):
         print(i)
         action = [np.array([a]) for a in info["next_speed_est"]]
         observation, reward, done, info = env.step(action,
