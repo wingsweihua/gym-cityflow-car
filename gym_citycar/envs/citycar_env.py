@@ -112,7 +112,8 @@ class CityCarEnv(gym.Env):
         n_done = self._check_done(n_info)
 
         # observations for next step
-        self._set_signal()
+        if 'ring' not in self.path_to_conf_file:
+            self._set_signal()
         next_n_obs, next_n_reward, next_n_info = self._get_description()
         # n_info: vec_id, next_speed_est, priority, current_time, lane_id
 
@@ -164,9 +165,10 @@ class CityCarEnv(gym.Env):
     def reset(self):
         self.eng = engine.Engine(self.path_to_conf_file)
         self._extract_sim_params()
-        self._load_signal_plan()
+        if 'ring' not in self.path_to_conf_file:
+            self._load_signal_plan()
 
-        self._set_signal()
+            self._set_signal()
         n_obs, n_reward, n_info = self._get_description()
 
         return n_obs, n_info
@@ -176,10 +178,13 @@ class CityCarEnv(gym.Env):
 
     def _get_current_phase(self, inter_id):
         current_time = self.eng.get_current_time()
-        if current_time == len(self.signal_plan):
-            return int(self.signal_plan[inter_id][int(current_time-1)])
+        if 'ring' not in self.path_to_conf_file:
+            if current_time == len(self.signal_plan):
+                return int(self.signal_plan[inter_id][int(current_time-1)])
+            else:
+                return int(self.signal_plan[inter_id][int(current_time)])
         else:
-            return int(self.signal_plan[inter_id][int(current_time)])
+            return 0
 
     def _load_signal_plan(self):
 
@@ -197,23 +202,36 @@ class CityCarEnv(gym.Env):
                                   self._get_current_phase(inter_id))
 
     def _cal_facing_inter(self, l_id):
+        if 'ring' in self.path_to_conf_file:
+            lane_id_split = l_id.split('_')
 
-        lane_id_split = l_id.split('_')
-
-        x = int(lane_id_split[1])
-        y = int(lane_id_split[2])
-        d = int(lane_id_split[3])
-
-        if d == 0:
-            facing_inter = "intersection_{0}_{1}".format(x + 1, y)
-        elif d == 1:
-            facing_inter = "intersection_{0}_{1}".format(x, y + 1)
-        elif d == 2:
-            facing_inter = "intersection_{0}_{1}".format(x - 1, y)
-        elif d == 3:
-            facing_inter = "intersection_{0}_{1}".format(x, y - 1)
+            if lane_id_split[0]== 'bottom':
+                facing_inter = "right"
+            elif lane_id_split[0]== 'right':
+                facing_inter = "top"
+            elif lane_id_split[0]== 'top':
+                facing_inter = "left"
+            elif lane_id_split[0]== 'left':
+                facing_inter = "bottom"
+            else:
+                sys.exit()
         else:
-            sys.exit()
+            lane_id_split = l_id.split('_')
+
+            x = int(lane_id_split[1])
+            y = int(lane_id_split[2])
+            d = int(lane_id_split[3])
+
+            if d == 0:
+                facing_inter = "intersection_{0}_{1}".format(x + 1, y)
+            elif d == 1:
+                facing_inter = "intersection_{0}_{1}".format(x, y + 1)
+            elif d == 2:
+                facing_inter = "intersection_{0}_{1}".format(x - 1, y)
+            elif d == 3:
+                facing_inter = "intersection_{0}_{1}".format(x, y - 1)
+            else:
+                sys.exit()
 
         return facing_inter
 
@@ -528,7 +546,7 @@ class CityCarEnv(gym.Env):
 
 if __name__ == "__main__":
 
-    env = CityCarEnv(path_to_conf_file=os.path.join("config", "simulator", "LA.json"),
+    env = CityCarEnv(path_to_conf_file=os.path.join("config", "simulator", "hangzhou.json"),
                      list_vars_to_subscribe=["interval",
                  "max_pos_acc", "max_neg_acc", "max_speed", "min_gap", "headway_time",
                  "speed", "pos_in_lane", "lane_max_speed", "if_exit_lane", "dist_to_signal", "phase", "if_leader",
