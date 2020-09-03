@@ -131,6 +131,13 @@ class CityCarEnv(gym.Env):
 
         return next_n_obs, n_reward, n_done, next_n_info
 
+    def _take_snapshot(self):
+        archive = self.eng.snapshot()
+        return archive
+
+    def _load_snapshot(self, archive):
+        return self.eng.load(archive)
+
 
     def _check_done(self, n_info):
 
@@ -159,7 +166,7 @@ class CityCarEnv(gym.Env):
                 speed = n_action[ind][0]
             else:
                 speed = n_action[ind][0] * self.dic_feature_range["speed"][1]
-            self.eng.set_vehicle_speed(n_info["priority"][ind], speed)
+            self.eng.set_vehicle_speed(n_info["vec_id"][ind], speed)
 
 
     def reset(self):
